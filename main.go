@@ -24,20 +24,21 @@ type Api struct {
 }
 
 var host *string
-
-var KongProxy = 80
-var KongAdmin = 8001
+var KongProxy *int
+var KongAdmin *int
 
 func main() {
 
 	host = flag.String("host", "localhost", "Host address for the kong admin")
+	KongProxy = flag.Int("proxy-port", 8000, "Proxy port for Kong")
+	KongAdmin = flag.Int("admin-port", 8001, "Admin port for Kong")
 	flag.Parse()
 
-	log.Println("Connecting to " + *host + ":" + strconv.Itoa(KongAdmin))
+	log.Println("Connecting to " + *host + ":" + strconv.Itoa(*KongAdmin))
 
 	go func() {
 		for range time.Tick(time.Second * 5) {
-			resp, err := http.Get("http://" + *host + ":" + strconv.Itoa(KongAdmin) + "/apis")
+			resp, err := http.Get("http://" + *host + ":" + strconv.Itoa(*KongAdmin) + "/apis")
 			defer resp.Body.Close()
 
 			log.Println("Heartbeat:", resp.StatusCode)
@@ -60,7 +61,7 @@ func main() {
 
 				// Check
 				status := Check(
-					data.Apis[i].RequestHost+":"+strconv.Itoa(KongProxy),
+					data.Apis[i].RequestHost+":"+strconv.Itoa(*KongProxy),
 					data.Apis[i].Name,
 				)
 
