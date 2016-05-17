@@ -14,7 +14,7 @@ Kong Beat is a service listener and health checker for Kong. Very much a work in
 
 ### Docker
 ```
-docker run -it --link kong:kong theladbiblegroup/kongbeat:latest \ 
+docker run -it --link kong:kong ewanvalentine/kongbeat:latest \ 
        -host=localhost \
        -admin-port=8001 \
        -proxy-port=80 \
@@ -33,4 +33,4 @@ docker run -it --link kong:kong theladbiblegroup/kongbeat:latest \
 - Pre-configure services, YAML definition file? 
 - Attempt to resuscitate deceased containers using the Docker API?
 
-### Author - Ewan Valentine ewan@theladbible.com
+### Author - Ewan Valentine ewan.valentine89@gmail.com
