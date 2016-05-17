@@ -29,3 +29,4 @@ docker run -it --link kong:kong theladbiblegroup/kongbeat:latest \
            -pulse=10 
 ```
 
+### Author - Ewan Valentine ewan@theladbible.com
