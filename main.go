@@ -42,7 +42,7 @@ func main() {
 
 			log.Println("Heartbeat:", resp.StatusCode)
 
-			if err != nil {
+			if resp == nil {
 				log.Fatal(err)
 			}
 
@@ -55,14 +55,16 @@ func main() {
 				log.Fatal(err)
 			}
 
+			// Foreach API
 			for i := 0; i < len(data.Apis); i++ {
-				log.Println(data.Apis[i])
 
+				// Check
 				status := Check(
 					data.Apis[i].RequestHost+":"+strconv.Itoa(KongProxy),
 					data.Apis[i].Name,
 				)
 
+				// If status not 200, de-register service
 				if status != 200 {
 					go Deregister(data.Apis[i].Name)
 				}
