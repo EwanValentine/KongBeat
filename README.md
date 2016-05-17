@@ -13,10 +13,19 @@ Kong Beat is a service listener and health checker for Kong. Very much a work in
 ## How-to run 
 
 ### Docker
-- `docker run -it --link kong:kong theladbiblegroup/kongbeat:latest -host=localhost`
+```
+docker run -it --link kong:kong theladbiblegroup/kongbeat:latest \ 
+       -host=localhost \
+       -admin-port=8001 \
+       -proxy-port=80 \
+       -pulse=10 
+```
 
 ### Standalone 
-- `./KongBeat -host=localhost`
-
-
+```
+./KongBeat -host=localhost \
+           -admin-port=8001 \
+           -proxy-port=80 \
+           -pulse=10 
+```
 

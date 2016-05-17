@@ -24,12 +24,14 @@ type Api struct {
 }
 
 var host *string
+var pulse *int
 var KongProxy *int
 var KongAdmin *int
 
 func main() {
 
 	host = flag.String("host", "localhost", "Host address for the kong admin")
+	pulse = flag.Int("pulse", 5, "Refresh rate for api checks in seconds")
 	KongProxy = flag.Int("proxy-port", 8000, "Proxy port for Kong")
 	KongAdmin = flag.Int("admin-port", 8001, "Admin port for Kong")
 	flag.Parse()
@@ -37,7 +39,7 @@ func main() {
 	log.Println("Connecting to " + *host + ":" + strconv.Itoa(*KongAdmin))
 
 	go func() {
-		for range time.Tick(time.Second * 5) {
+		for range time.Tick(time.Second * time.Duration(*pulse)) {
 			resp, err := http.Get("http://" + *host + ":" + strconv.Itoa(*KongAdmin) + "/apis")
 			defer resp.Body.Close()
 
