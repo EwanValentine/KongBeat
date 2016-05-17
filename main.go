@@ -25,16 +25,19 @@ type Api struct {
 
 var host *string
 
+var KongProxy = 80
+var KongAdmin = 8001
+
 func main() {
 
 	host = flag.String("host", "localhost", "Host address for the kong admin")
 	flag.Parse()
 
-	log.Println("Connecting to " + *host + ":8001")
+	log.Println("Connecting to " + *host + ":" + strconv.Itoa(KongAdmin))
 
 	go func() {
 		for range time.Tick(time.Second * 5) {
-			resp, err := http.Get("http://" + *host + ":8001/apis")
+			resp, err := http.Get("http://" + *host + ":" + strconv.Itoa(KongAdmin) + "/apis")
 			defer resp.Body.Close()
 
 			log.Println(resp.StatusCode)
@@ -54,38 +57,59 @@ func main() {
 
 			for i := 0; i < len(data.Apis); i++ {
 				log.Println(data.Apis[i])
-				go Check(data.Apis[i].UpstreamUrl, data.Apis[i].Name)
+
+				status := Check(
+					data.Apis[i].RequestHost+":"+strconv.Itoa(KongProxy),
+					data.Apis[i].Name,
+				)
+
+				if status != 200 {
+					Deregister(data.Apis[i].Name)
+				}
 			}
 		}
 	}()
 
-	time.Sleep(time.Second * 20)
+	done := make(chan bool)
+	go forever()
+	<-done
 }
 
-func Check(upstream, name string) {
-	resp, err := http.Get(upstream)
+func forever() {
+	for {
+		time.Sleep(time.Second)
+	}
+}
+
+// Check - Check a service upstream, return status
+func Check(host, name string) int {
+
+	// 2 second timeout, timeout shouldn't be really long
+	client := http.Client{
+		Timeout: time.Duration(2 * time.Second),
+	}
+	resp, err := client.Get(host)
 	defer resp.Body.Close()
 
+	log.Println(host + " = " + strconv.Itoa(resp.StatusCode))
+
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return resp.StatusCode
 	}
 
-	log.Println(upstream + " = " + strconv.Itoa(resp.StatusCode))
-
-	if resp.StatusCode != 200 {
-
-		// Deregister
-		status := Deregister(name)
-		log.Println(status)
-	}
+	return resp.StatusCode
 }
 
-func Deregister(name string) int {
+// Deregister - Deregister a service
+func Deregister(name string) {
+	log.Println("De-registering service: " + name)
 	client := &http.Client{}
 	req, err := http.NewRequest("DELETE", "http://"+*host+":8001/apis/"+name, nil)
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
-	return resp.StatusCode
+
+	log.Println("De-registered service: " + strconv.Itoa(resp.StatusCode))
 }
