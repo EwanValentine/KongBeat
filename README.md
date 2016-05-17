@@ -29,4 +29,8 @@ docker run -it --link kong:kong theladbiblegroup/kongbeat:latest \
            -pulse=10 
 ```
 
+### Idea's 
+- Pre-configure services, YAML definition file? 
+- Attempt to resuscitate deceased containers using the Docker API?
+
 ### Author - Ewan Valentine ewan@theladbible.com
