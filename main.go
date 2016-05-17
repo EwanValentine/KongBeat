@@ -40,7 +40,7 @@ func main() {
 			resp, err := http.Get("http://" + *host + ":" + strconv.Itoa(KongAdmin) + "/apis")
 			defer resp.Body.Close()
 
-			log.Println(resp.StatusCode)
+			log.Println("Heartbeat:", resp.StatusCode)
 
 			if err != nil {
 				log.Fatal(err)
@@ -64,7 +64,7 @@ func main() {
 				)
 
 				if status != 200 {
-					Deregister(data.Apis[i].Name)
+					go Deregister(data.Apis[i].Name)
 				}
 			}
 		}
@@ -88,17 +88,15 @@ func Check(host, name string) int {
 	client := http.Client{
 		Timeout: time.Duration(2 * time.Second),
 	}
-	resp, err := client.Get(host)
-	defer resp.Body.Close()
+	resp, _ := client.Get(host)
 
-	log.Println(host + " = " + strconv.Itoa(resp.StatusCode))
-
-	if err != nil {
-		log.Println(err)
+	if resp != nil {
+		log.Println("OK:", host+" -- "+strconv.Itoa(resp.StatusCode))
 		return resp.StatusCode
 	}
 
-	return resp.StatusCode
+	log.Println("Lost:", name)
+	return 404
 }
 
 // Deregister - Deregister a service
@@ -107,9 +105,10 @@ func Deregister(name string) {
 	client := &http.Client{}
 	req, err := http.NewRequest("DELETE", "http://"+*host+":8001/apis/"+name, nil)
 	resp, err := client.Do(req)
-	if err != nil {
-		log.Println(err)
+
+	if resp != nil {
+		log.Println("De-registered service: " + strconv.Itoa(resp.StatusCode))
 	}
 
-	log.Println("De-registered service: " + strconv.Itoa(resp.StatusCode))
+	log.Println(err)
 }
