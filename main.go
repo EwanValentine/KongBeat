@@ -117,9 +117,11 @@ func main() {
 
 				// Check
 				status := Check(
-					data.Apis[i].RequestHost+":"+strconv.Itoa(*KongProxy),
+					data.Apis[i].UpstreamUrl,
 					data.Apis[i].Name,
 				)
+
+				log.Println(status)
 
 				// If status not 200, de-register service
 				if status != 200 {
@@ -141,16 +143,16 @@ func forever() {
 }
 
 // Check - Check a service upstream, return status
-func Check(host, name string) int {
+func Check(upstream, name string) int {
 
 	// 2 second timeout, timeout shouldn't be really long
 	client := http.Client{
 		Timeout: time.Duration(2 * time.Second),
 	}
-	resp, _ := client.Get(host)
+	resp, _ := client.Get(upstream)
 
 	if resp != nil {
-		log.Println("OK:", host+" -- "+strconv.Itoa(resp.StatusCode))
+		log.Println("OK:", upstream+" -- "+strconv.Itoa(resp.StatusCode))
 		return resp.StatusCode
 	}
 
