@@ -56,11 +56,11 @@ func main() {
 		if event.Status == "start" {
 			if container, _ := client.InspectContainer(event.ID); container != nil {
 
+				var api Api
+
 				// Get environment variables, look for KONG_BEAT_*
 				// Foreach environment variable
 				for _, env := range container.Config.Env {
-
-					var api Api
 
 					// Look for Kong upstream url
 					if strings.HasPrefix(env, "KONG_UPSTREAM_URL=") {
@@ -77,7 +77,11 @@ func main() {
 					}
 
 					// @todo - do preserve host and other opts
+				}
 
+				log.Println(api)
+
+				if api.Name != "" {
 					go Register(api)
 				}
 			}
@@ -173,7 +177,9 @@ func Register(api Api) {
 	v.Add("name", api.Name)
 	resp, err := http.PostForm("http://"+*host+":8001/apis", v)
 	defer resp.Body.Close()
-	if err != nil {
-		log.Fatal(err)
+	if resp != nil {
+		log.Println("Successfully registered service:", api.Name)
+	} else {
+		log.Println(err)
 	}
 }
