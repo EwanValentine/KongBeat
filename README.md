@@ -29,6 +29,31 @@ docker run -it --link kong:kong ewanvalentine/kongbeat:latest \
            -pulse=10 
 ```
 
+### Docker Compose
+```
+kong-beat: 
+  image: ewanvalentine/kongbeat:latest
+  restart: always
+  depends_on:
+    - kong
+    - kong-database
+  entrypoint:
+    - ./KongBeat
+    - -admin-port=8001
+    - -proxy-port=80
+    - -pulse=5
+    - -host=kong
+
+myservice:
+  image: myimage
+  ports: 
+    - "1000:1000"
+  environment:
+    KONG_UPSTREAM_URL: http://myservice:1000
+    KONG_NAME: myservice 
+    KONG_HOST: myservce.myhost.com
+```
+
 ### Idea's 
 - Pre-configure services, YAML definition file? 
 - Attempt to resuscitate deceased containers using the Docker API?
