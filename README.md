@@ -5,7 +5,7 @@ Kong Beat is a service listener and health checker for Kong. Very much a work in
 ## Features
 - Checks status of each service registered in Kong, re-registers services which have stopped.
 - Pre-configures Kong services based on given configuration (@TODO)
-- Works standalone or in Docker
+- Works standalone or in Docke
 
 ## How-to build
 - Build the binary `$ make`
