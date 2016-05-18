@@ -1,12 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"github.com/fsouza/go-dockerclient"
 	"log"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -44,9 +44,13 @@ func main() {
 	log.Println("Connecting to " + *host + ":" + strconv.Itoa(*KongAdmin))
 
 	endpoint := "unix:///var/run/docker.sock"
-	client, _ := docker.NewClient(endpoint)
+	client, err := docker.NewClient(endpoint)
 
-	err := client.AddEventListener(dockerEvents)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = client.AddEventListener(dockerEvents)
 
 	if err != nil {
 		log.Fatal(err)
@@ -171,11 +175,10 @@ func Deregister(name string) {
 // Register - Register a service with Kong
 func Register(api Api) {
 	log.Println("Registering Service:", api.Name)
-	v := url.Values{}
-	v.Add("request_host", api.RequestHost)
-	v.Add("upstream_url", api.UpstreamUrl)
-	v.Add("name", api.Name)
-	resp, err := http.PostForm("http://"+*host+":8001/apis", v)
+	client := &http.Client{}
+	data, _ := json.Marshal(api)
+	req, err := http.NewRequest("POST", "http://"+*host+":8001/apis", bytes.NewBuffer(data))
+	resp, err := client.Do(req)
 	defer resp.Body.Close()
 	if resp != nil {
 		log.Println("Successfully registered service:", api.Name)
