@@ -41,9 +41,16 @@ func main() {
 
 	log.Println("Connecting to " + *host + ":" + strconv.Itoa(*KongAdmin))
 
-	go DockerListen()
+	dockerEvents := make(chan *docker.APIEvents)
+	endpoint := "unix:///var/run/docker.sock"
 
-	// DockerListen - Listens for docker `start` events
+	// Does initial docker check
+	DockerCheck(dockerEvents, endpoint)
+
+	// Sets event listener on further docker events
+	go DockerListen(dockerEvents, endpoint)
+
+	// Listens for changes in Kong api's, removes duds
 	go func() {
 		for range time.Tick(time.Second * time.Duration(*pulse)) {
 			resp, err := http.Get("http://" + *host + ":" + strconv.Itoa(*KongAdmin) + "/apis")
@@ -94,11 +101,14 @@ func forever() {
 	}
 }
 
-// DockerListen - Listens for docker `start` events
-func DockerListen() {
-	dockerEvents := make(chan *docker.APIEvents)
+// DockerCheck - Does initial checks for docker containers
+func DockerCheck(dockerEvents chan *docker.APIEvents, endpoint string) {
 
-	endpoint := "unix:///var/run/docker.sock"
+}
+
+// DockerListen - Listens for docker `start` events
+func DockerListen(dockerEvents chan *docker.APIEvents, endpoint string) {
+
 	client, err := docker.NewClient(endpoint)
 
 	if err != nil {
