@@ -1,12 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"github.com/fsouza/go-dockerclient"
 	"log"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -19,8 +19,6 @@ type Data struct {
 type Api struct {
 	UpstreamUrl      string `json:"upstream_url"`
 	StripRequestPath bool   `json:"strip_request_path"`
-	Id               string `json:"id"`
-	CreatedAt        int    `json:"created_at"`
 	PreserveHost     bool   `json:"preserve_host"`
 	Name             string `json:"name"`
 	RequestHost      string `json:"request_host"`
@@ -206,17 +204,18 @@ func Deregister(name string) {
 
 // Register - Register a service with Kong
 func Register(api Api) {
+
 	log.Println("Registering Service:", api.Name)
-	// 2 second timeout, timeout shouldn't be really long
+
 	client := &http.Client{}
-	form := url.Values{}
-	form.Add("upstream_url", api.UpstreamUrl)
-	form.Add("request_host", api.RequestHost)
-	form.Add("name", api.Name)
-	req, err := http.NewRequest("POST", "http://"+*host+":8001/apis", strings.NewReader(form.Encode()))
+	data, _ := json.Marshal(api)
+	log.Println(bytes.NewBuffer(data))
+	req, err := http.NewRequest("POST", "http://"+*host+":8001/apis", bytes.NewBuffer(data))
+	req.Header.Set("Content-Type", "application/json")
 	resp, err := client.Do(req)
 	defer resp.Body.Close()
 	if resp != nil {
+		log.Println(resp.StatusCode)
 		log.Println("Successfully registered service:", api.Name)
 	} else {
 		log.Println(err)
