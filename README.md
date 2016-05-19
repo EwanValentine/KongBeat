@@ -57,7 +57,6 @@ myservice:
 ```
 
 ### Idea's 
-- Pre-configure services, YAML definition file? 
 - Attempt to resuscitate deceased containers using the Docker API?
 
 ### Author - Ewan Valentine ewan.valentine89@gmail.com
