@@ -87,7 +87,8 @@ func main() {
 
 				// If status not 200, de-register service
 				if status != 200 {
-					go Deregister(data.Apis[i].Name)
+					// Alerting will go here
+					// go Deregister(data.Apis[i].Name)
 				}
 			}
 		}
