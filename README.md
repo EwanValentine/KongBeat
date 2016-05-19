@@ -5,7 +5,7 @@ Kong Beat is a service listener and health checker for Kong. Very much a work in
 ## Features
 - Checks status of each service registered in Kong, re-registers services which have stopped.
 - Pre-configures Kong services based on given configuration (@TODO)
-- Works standalone or in Docke
+- Works standalone or in Docker
 
 ## How-to build
 - Build the binary `$ make`
@@ -55,6 +55,13 @@ myservice:
     KONG_NAME: myservice 
     KONG_HOST: myservce.myhost.com
 ```
+
+### Config 
+
+- admin-port - Kong's admin port (typically 8001)
+- proxy-port - Kong's entrypoint (typically 8000)
+- host - Kong's host (`kong` in a Docker network, typically)
+- pulse - Interval between running checks
 
 ### Idea's 
 - Attempt to resuscitate deceased containers using the Docker API?

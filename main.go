@@ -209,15 +209,16 @@ func Register(api Api) {
 
 	client := &http.Client{}
 	data, _ := json.Marshal(api)
-	log.Println(bytes.NewBuffer(data))
 	req, err := http.NewRequest("POST", "http://"+*host+":8001/apis", bytes.NewBuffer(data))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := client.Do(req)
 	defer resp.Body.Close()
 	if resp != nil {
-		log.Println(resp.StatusCode)
+		if resp.StatusCode == 500 {
+			log.Fatal("Failed to register service:", resp.StatusCode)
+		}
 		log.Println("Successfully registered service:", api.Name)
 	} else {
-		log.Println(err)
+		log.Fatal("Couldn't connect to kong:", err)
 	}
 }
