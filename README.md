@@ -15,7 +15,7 @@ Kong Beat is a service listener and health checker for Kong. Very much a work in
 ### Docker
 ```
 docker run -it --link kong:kong ewanvalentine/kongbeat:latest \ 
-       -host=localhost \
+       -host=kong \
        -admin-port=8001 \
        -proxy-port=80 \
        -pulse=10 
@@ -23,7 +23,7 @@ docker run -it --link kong:kong ewanvalentine/kongbeat:latest \
 
 ### Standalone 
 ```
-./KongBeat -host=localhost \
+./KongBeat -host=kong \
            -admin-port=8001 \
            -proxy-port=80 \
            -pulse=10 
@@ -43,6 +43,8 @@ kong-beat:
     - -proxy-port=80
     - -pulse=5
     - -host=kong
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
 
 myservice:
   image: myimage
