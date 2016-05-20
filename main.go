@@ -31,7 +31,7 @@ var KongAdmin *int
 
 func main() {
 
-	host = flag.String("host", "localhost", "Host address for the kong admin")
+	host = flag.String("host", "kong", "Host address for the kong admin")
 	pulse = flag.Int("pulse", 5, "Refresh rate for api checks in seconds")
 	KongProxy = flag.Int("proxy-port", 8000, "Proxy port for Kong")
 	KongAdmin = flag.Int("admin-port", 8001, "Admin port for Kong")
@@ -39,60 +39,79 @@ func main() {
 
 	log.Println("Connecting to " + *host + ":" + strconv.Itoa(*KongAdmin))
 
-	dockerEvents := make(chan *docker.APIEvents)
-	endpoint := "unix:///var/run/docker.sock"
-	client, err := docker.NewClient(endpoint)
+	poll := make(chan int)
 
-	if err != nil {
-		log.Fatal(err)
-	}
+	var kongStatus int
+	ticker := time.NewTicker(time.Millisecond * 1000)
 
-	// Does initial docker check
-	DockerCheck(dockerEvents, client)
-
-	// Sets event listener on further docker events
-	go DockerListen(dockerEvents, client)
-
-	// Listens for changes in Kong api's, removes duds
 	go func() {
-		for range time.Tick(time.Second * time.Duration(*pulse)) {
-			resp, err := http.Get("http://" + *host + ":" + strconv.Itoa(*KongAdmin) + "/apis")
-			defer resp.Body.Close()
-
-			log.Println("Heartbeat:", resp.StatusCode)
-
-			if resp == nil {
-				log.Fatal(err)
-			}
-
-			decoder := json.NewDecoder(resp.Body)
-
-			var data Data
-			err = decoder.Decode(&data)
-
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			// Foreach API
-			for i := 0; i < len(data.Apis); i++ {
-
-				// Check
-				status := Check(
-					data.Apis[i].UpstreamUrl,
-					data.Apis[i].Name,
-				)
-
-				log.Println(status)
-
-				// If status not 200, de-register service
-				if status != 200 {
-					// Alerting will go here
-					// go Deregister(data.Apis[i].Name)
-				}
-			}
+		for t := range ticker.C {
+			poll <- PollKong()
 		}
 	}()
+
+	kongStatus = <-poll
+
+	log.Println(kongStatus)
+
+	if kongStatus == 200 {
+		ticker.Stop()
+
+		dockerEvents := make(chan *docker.APIEvents)
+		endpoint := "unix:///var/run/docker.sock"
+		client, err := docker.NewClient(endpoint)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// Does initial docker check
+		DockerCheck(dockerEvents, client)
+
+		// Sets event listener on further docker events
+		go DockerListen(dockerEvents, client)
+
+		// Listens for changes in Kong api's, removes duds
+		go func() {
+			for range time.Tick(time.Second * time.Duration(*pulse)) {
+				resp, err := http.Get("http://" + *host + ":" + strconv.Itoa(*KongAdmin) + "/apis")
+				defer resp.Body.Close()
+
+				log.Println("Heartbeat:", resp.StatusCode)
+
+				if resp == nil {
+					log.Fatal(err)
+				}
+
+				decoder := json.NewDecoder(resp.Body)
+
+				var data Data
+				err = decoder.Decode(&data)
+
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				// Foreach API
+				for i := 0; i < len(data.Apis); i++ {
+
+					// Check
+					status := Check(
+						data.Apis[i].UpstreamUrl,
+						data.Apis[i].Name,
+					)
+
+					log.Println(status)
+
+					// If status not 200, de-register service
+					if status != 200 {
+						// Alerting will go here
+						// go Deregister(data.Apis[i].Name)
+					}
+				}
+			}
+		}()
+	}
 
 	done := make(chan bool)
 	go forever()
@@ -171,6 +190,20 @@ func DockerListen(dockerEvents chan *docker.APIEvents, client *docker.Client) {
 	}
 }
 
+// PollKong - Polls Kong, if it doesn't return a 200, wait and try again
+// This is to handle race conditions gracefully.
+func PollKong() int {
+	log.Println("Polling Kong...")
+
+	resp, _ := http.Get("http://" + *host + ":" + strconv.Itoa(*KongAdmin) + "/status")
+
+	if resp != nil {
+		return resp.StatusCode
+	}
+
+	return 404
+}
+
 // Check - Check a service upstream, return status
 func Check(upstream, name string) int {
 
@@ -193,7 +226,7 @@ func Check(upstream, name string) int {
 func Deregister(name string) {
 	log.Println("De-registering service: " + name)
 	client := &http.Client{}
-	req, err := http.NewRequest("DELETE", "http://"+*host+":8001/apis/"+name, nil)
+	req, err := http.NewRequest("DELETE", "http://"+*host+":"+strconv.Itoa(*KongAdmin)+"/apis/"+name, nil)
 	resp, err := client.Do(req)
 
 	if resp != nil {
@@ -210,7 +243,7 @@ func Register(api Api) {
 
 	client := &http.Client{}
 	data, _ := json.Marshal(api)
-	req, err := http.NewRequest("POST", "http://"+*host+":8001/apis", bytes.NewBuffer(data))
+	req, err := http.NewRequest("POST", "http://"+*host+":"+strconv.Itoa(*KongAdmin)+"/apis", bytes.NewBuffer(data))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := client.Do(req)
 	defer resp.Body.Close()
