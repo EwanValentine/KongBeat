@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"github.com/fsouza/go-dockerclient"
+	"github.com/kataras/iris"
 	"log"
 	"net/http"
 	"strconv"
@@ -24,6 +25,7 @@ type Api struct {
 	RequestHost      string `json:"request_host"`
 }
 
+var port *int
 var host *string
 var pulse *int
 var KongProxy *int
@@ -31,6 +33,7 @@ var KongAdmin *int
 
 func main() {
 
+	port = flag.Int("port", 4242, "Port Kong runs on")
 	host = flag.String("host", "localhost", "Host address for the kong admin")
 	pulse = flag.Int("pulse", 5, "Refresh rate for api checks in seconds")
 	KongProxy = flag.Int("proxy-port", 8000, "Proxy port for Kong")
@@ -38,6 +41,18 @@ func main() {
 	flag.Parse()
 
 	log.Println("Connecting to " + *host + ":" + strconv.Itoa(*KongAdmin))
+
+	iris.StaticServe("./static", "/")
+
+	iris.Get("/", func(ctx *iris.Context) {
+		ctx.Write("Append one of these to browser's address bar:\n/assets/js/jquery-2.1.1.js\n/assets/css/bootstrap.min.css")
+	})
+
+	iris.StaticServe("./resources", "/assets")
+
+	log.Println("Running on port", *port)
+
+	log.Println("testing")
 
 	dockerEvents := make(chan *docker.APIEvents)
 	endpoint := "unix:///var/run/docker.sock"
@@ -53,11 +68,11 @@ func main() {
 	// Sets event listener on further docker events
 	go DockerListen(dockerEvents, client)
 
-	// Listens for changes in Kong api's, removes duds
+	// Listens for changes in Kong api's
 	go func() {
 		for range time.Tick(time.Second * time.Duration(*pulse)) {
 			resp, err := http.Get("http://" + *host + ":" + strconv.Itoa(*KongAdmin) + "/apis")
-			defer resp.Body.Close()
+			// defer resp.Body.Close()
 
 			log.Println("Heartbeat:", resp.StatusCode)
 
@@ -87,6 +102,7 @@ func main() {
 
 				// If status not 200, de-register service
 				if status != 200 {
+
 					// Alerting will go here
 					// go Deregister(data.Apis[i].Name)
 				}
@@ -94,6 +110,9 @@ func main() {
 		}
 	}()
 
+	iris.Listen("0.0.0.0:" + strconv.Itoa(*port))
+
+	// Might not need this what with the web server
 	done := make(chan bool)
 	go forever()
 	<-done
